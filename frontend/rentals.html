@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rentals - ATV Rental System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Page Loader -->
+    <div class="page-loader" id="page-loader">
+        <div class="spinner-large"></div>
+    </div>
+    
+    <script>
+        // Hide loader when DOM is ready (fallback)
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                var loader = document.getElementById('page-loader');
+                if (loader) loader.classList.add('hidden');
+            }, 300);
+        });
+    </script>
+
+    <div class="page-wrapper">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="container">
+                <a href="dashboard.html" class="navbar-brand">🏍️ ATV Rental</a>
+                <button class="nav-toggle" onclick="$('.navbar-nav').toggleClass('active')">☰</button>
+                <ul class="navbar-nav">
+                    <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+                    <li><a href="atvs.html" class="nav-link">ATVs</a></li>
+                    <li><a href="rentals.html" class="nav-link active">Rentals</a></li>
+                    <li class="nav-admin"><a href="users.html" class="nav-link">Users</a></li>
+                    <li><a href="profile.html" class="nav-link">Profile</a></li>
+                    <li><a href="#" class="nav-link" onclick="Auth.logout(); return false;">Logout</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container">
+                <h1>Rentals</h1>
+                
+                <!-- Filters -->
+                <div class="search-bar">
+                    <div class="filter-group">
+                        <select class="form-control" id="status-filter">
+                            <option value="">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="approved">Approved</option>
+                            <option value="denied">Denied</option>
+                            <option value="rented">Rented</option>
+                            <option value="pending_return">Pending Return</option>
+                            <option value="returned">Returned</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Rentals Table -->
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="table" id="rentals-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th class="manager-col">Customer</th>
+                                    <th>ATV</th>
+                                    <th>Start</th>
+                                    <th>End</th>
+                                    <th>Price</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rentals-body">
+                                <tr><td colspan="8" class="text-center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Pagination -->
+                <div id="pagination"></div>
+            </div>
+        </main>
+
+        <!-- Rental Details Modal -->
+        <div id="rental-modal" class="modal-overlay" style="display: none;">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3>Rental Details</h3>
+                    <button class="modal-close" onclick="$('#rental-modal').hide()">&times;</button>
+                </div>
+                <div class="modal-body" id="rental-details">
+                    <!-- Details will be loaded here -->
+                </div>
+                <div class="modal-footer" id="rental-actions">
+                    <!-- Actions will be added based on status -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/messages.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        let currentPage = 1;
+
+        $(document).ready(function() {
+            // Hide page loader
+            $('#page-loader').addClass('hidden');
+            
+            if (!Auth.requireAuth()) return;
+
+            // Hide customer column if user is customer
+            if (Auth.isCustomer()) {
+                $('.manager-col').hide();
+            } else {
+                if (Auth.isAdmin()) {
+                    $('.nav-admin').show();
+                }
+            }
+
+            // Check URL for status filter
+            const urlParams = new URLSearchParams(window.location.search);
+            const statusFilter = urlParams.get('status');
+            if (statusFilter) {
+                $('#status-filter').val(statusFilter);
+            }
+
+            loadRentals();
+
+            $('#status-filter').on('change', () => loadRentals(1));
+        });
+
+        async function loadRentals(page = 1) {
+            currentPage = page;
+            const params = {
+                page: page,
+                per_page: 15,
+                status: $('#status-filter').val()
+            };
+
+            try {
+                const response = await API.get('/rentals', params);
+                renderRentals(response.data);
+                $('#pagination').html(App.buildPagination(response.pagination));
+                
+                $('.page-btn').on('click', function() {
+                    loadRentals($(this).data('page'));
+                });
+            } catch (error) {
+                $('#rentals-body').html(`<tr><td colspan="8" class="text-danger text-center">${Messages.rental.loadFailed}</td></tr>`);
+            }
+        }
+
+        function renderRentals(rentals) {
+            if (!rentals || rentals.length === 0) {
+                $('#rentals-body').html('<tr><td colspan="8" class="text-center">No rentals found.</td></tr>');
+                return;
+            }
+
+            const isManager = Auth.canManage();
+
+            const html = rentals.map(rental => `
+                <tr>
+                    <td>#${rental.id}</td>
+                    ${isManager ? `<td>${rental.user.name}</td>` : ''}
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            ${rental.atv.image ? `<img src="${rental.atv.image}" alt="" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">` : ''}
+                            ${rental.atv.name}
+                        </div>
+                    </td>
+                    <td>${App.formatDateTime(rental.start_time)}</td>
+                    <td>${App.formatDateTime(rental.end_time)}</td>
+                    <td>${App.formatCurrency(rental.total_price)}</td>
+                    <td>${App.getStatusBadge(rental.status)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline" onclick="viewRental(${rental.id})">View</button>
+                        ${getActionButtons(rental)}
+                    </td>
+                </tr>
+            `).join('');
+
+            $('#rentals-body').html(html);
+        }
+
+        function getActionButtons(rental) {
+            const isManager = Auth.canManage();
+            let buttons = '';
+
+            if (isManager) {
+                switch (rental.status) {
+                    case 'pending':
+                        buttons = `
+                            <button class="btn btn-sm btn-success" onclick="updateStatus(${rental.id}, 'approved')">Approve</button>
+                            <button class="btn btn-sm btn-danger" onclick="updateStatus(${rental.id}, 'denied')">Deny</button>
+                        `;
+                        break;
+                    case 'approved':
+                        buttons = `<button class="btn btn-sm btn-primary" onclick="updateStatus(${rental.id}, 'rented')">Mark Picked Up</button>`;
+                        break;
+                    case 'pending_return':
+                        buttons = `<button class="btn btn-sm btn-success" onclick="updateStatus(${rental.id}, 'returned')">Confirm Return</button>`;
+                        break;
+                }
+            } else {
+                // Customer actions
+                if (rental.status === 'rented') {
+                    buttons = `<button class="btn btn-sm btn-warning" onclick="requestReturn(${rental.id})">Request Return</button>`;
+                }
+            }
+
+            return buttons;
+        }
+
+        async function viewRental(id) {
+            try {
+                const response = await API.get(`/rentals/${id}`);
+                const rental = response.data;
+
+                $('#rental-details').html(`
+                    <div class="mb-3">
+                        <strong>Rental ID:</strong> #${rental.id}
+                    </div>
+                    <div class="mb-3">
+                        <strong>Customer:</strong> ${rental.user.name} (${rental.user.email})
+                    </div>
+                    <div class="mb-3">
+                        <strong>ATV:</strong> ${rental.atv.name} (${rental.atv.type})
+                    </div>
+                    <div class="mb-3">
+                        <strong>Period:</strong><br>
+                        ${App.formatDateTime(rental.start_time)} - ${App.formatDateTime(rental.end_time)}<br>
+                        <small class="text-muted">(${rental.duration_hours} hours)</small>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Total Price:</strong> <span style="font-size: 1.25rem; color: var(--primary-color);">${App.formatCurrency(rental.total_price)}</span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Status:</strong> ${App.getStatusBadge(rental.status)}
+                    </div>
+                    ${rental.notes ? `<div class="mb-3"><strong>Notes:</strong> ${rental.notes}</div>` : ''}
+                    <div class="text-muted">
+                        <small>Created: ${App.formatDateTime(rental.created_at)}</small>
+                    </div>
+                `);
+
+                // Add action buttons based on status
+                let actions = '<button class="btn btn-secondary" onclick="$(\'#rental-modal\').hide()">Close</button>';
+                
+                if (Auth.canManage()) {
+                    switch (rental.status) {
+                        case 'pending':
+                            actions = `
+                                <button class="btn btn-secondary" onclick="$('#rental-modal').hide()">Close</button>
+                                <button class="btn btn-danger" onclick="updateStatus(${rental.id}, 'denied'); $('#rental-modal').hide();">Deny</button>
+                                <button class="btn btn-success" onclick="updateStatus(${rental.id}, 'approved'); $('#rental-modal').hide();">Approve</button>
+                            `;
+                            break;
+                        case 'approved':
+                            actions = `
+                                <button class="btn btn-secondary" onclick="$('#rental-modal').hide()">Close</button>
+                                <button class="btn btn-primary" onclick="updateStatus(${rental.id}, 'rented'); $('#rental-modal').hide();">Mark as Picked Up</button>
+                            `;
+                            break;
+                        case 'pending_return':
+                            actions = `
+                                <button class="btn btn-secondary" onclick="$('#rental-modal').hide()">Close</button>
+                                <button class="btn btn-success" onclick="updateStatus(${rental.id}, 'returned'); $('#rental-modal').hide();">Confirm Return</button>
+                            `;
+                            break;
+                    }
+                } else {
+                    if (rental.status === 'rented') {
+                        actions = `
+                            <button class="btn btn-secondary" onclick="$('#rental-modal').hide()">Close</button>
+                            <button class="btn btn-warning" onclick="requestReturn(${rental.id}); $('#rental-modal').hide();">Request Return</button>
+                        `;
+                    }
+                }
+
+                $('#rental-actions').html(actions);
+                $('#rental-modal').show();
+            } catch (error) {
+                App.showError(Messages.rental.notFound);
+            }
+        }
+
+        async function updateStatus(id, status) {
+            try {
+                await API.put(`/rentals/${id}/status`, { status });
+                App.showSuccess(Messages.rental.updateStatusSuccess);
+                loadRentals(currentPage);
+            } catch (error) {
+                App.showError(Messages.getErrorMessage(error));
+            }
+        }
+
+        async function requestReturn(id) {
+            try {
+                await API.post(`/rentals/${id}/request-return`);
+                App.showSuccess(Messages.rental.requestReturnSuccess);
+                loadRentals(currentPage);
+            } catch (error) {
+                App.showError(Messages.getErrorMessage(error));
+            }
+        }
+    </script>
+</body>
+</html>
+

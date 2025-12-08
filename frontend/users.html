@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management - ATV Rental System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Page Loader -->
+    <div class="page-loader" id="page-loader">
+        <div class="spinner-large"></div>
+    </div>
+    
+    <script>
+        // Hide loader when DOM is ready (fallback)
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                var loader = document.getElementById('page-loader');
+                if (loader) loader.classList.add('hidden');
+            }, 300);
+        });
+    </script>
+
+    <div class="page-wrapper">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="container">
+                <a href="dashboard.html" class="navbar-brand">🏍️ ATV Rental</a>
+                <button class="nav-toggle" onclick="$('.navbar-nav').toggleClass('active')">☰</button>
+                <ul class="navbar-nav">
+                    <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+                    <li><a href="atvs.html" class="nav-link">ATVs</a></li>
+                    <li><a href="rentals.html" class="nav-link">Rentals</a></li>
+                    <li><a href="users.html" class="nav-link active">Users</a></li>
+                    <li><a href="profile.html" class="nav-link">Profile</a></li>
+                    <li><a href="#" class="nav-link" onclick="Auth.logout(); return false;">Logout</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container">
+                <h1>User Management</h1>
+                
+                <!-- Search & Filters -->
+                <div class="search-bar">
+                    <div class="search-input-wrapper">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" class="form-control" id="search-input" 
+                               placeholder="Search users by name or email...">
+                    </div>
+                    <div class="filter-group">
+                        <select class="form-control" id="role-filter">
+                            <option value="">All Roles</option>
+                            <option value="admin">Admin</option>
+                            <option value="manager">Manager</option>
+                            <option value="customer">Customer</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Users Table -->
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="table" id="users-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Username</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Verified</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-body">
+                                <tr><td colspan="7" class="text-center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Pagination -->
+                <div id="pagination"></div>
+            </div>
+        </main>
+
+        <!-- Edit User Modal -->
+        <div id="user-modal" class="modal-overlay" style="display: none;">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3>Edit User</h3>
+                    <button class="modal-close" onclick="$('#user-modal').hide()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="user-form">
+                        <input type="hidden" id="user-id">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label class="form-label">First Name</label>
+                                <input type="text" class="form-control" id="user-first-name" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Last Name</label>
+                                <input type="text" class="form-control" id="user-last-name" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Username</label>
+                            <input type="text" class="form-control" id="user-username" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="user-email" disabled>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Role</label>
+                            <select class="form-control" id="user-role">
+                                <option value="customer">Customer</option>
+                                <option value="manager">Manager</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" id="user-verified">
+                                Email Verified
+                            </label>
+                        </div>
+                        <div id="user-error" class="error-message mb-2" style="display: none;"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="$('#user-modal').hide()">Cancel</button>
+                    <button class="btn btn-primary" id="save-user-btn" onclick="saveUser()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/messages.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        let currentPage = 1;
+
+        $(document).ready(function() {
+            // Hide page loader
+            $('#page-loader').addClass('hidden');
+            
+            // Require admin role
+            if (!Auth.requireRole('admin')) return;
+
+            loadUsers();
+
+            // Search with debounce
+            const debouncedSearch = App.debounce(() => loadUsers(1), 300);
+            $('#search-input').on('input', debouncedSearch);
+
+            // Filter change
+            $('#role-filter').on('change', () => loadUsers(1));
+        });
+
+        async function loadUsers(page = 1) {
+            currentPage = page;
+            const params = {
+                page: page,
+                per_page: 15,
+                search: $('#search-input').val(),
+                role: $('#role-filter').val()
+            };
+
+            try {
+                const response = await API.get('/users', params);
+                renderUsers(response.data);
+                $('#pagination').html(App.buildPagination(response.pagination));
+                
+                $('.page-btn').on('click', function() {
+                    loadUsers($(this).data('page'));
+                });
+            } catch (error) {
+                $('#users-body').html(`<tr><td colspan="7" class="text-danger text-center">${Messages.user.loadFailed}</td></tr>`);
+            }
+        }
+
+        function renderUsers(users) {
+            if (!users || users.length === 0) {
+                $('#users-body').html('<tr><td colspan="7" class="text-center">No users found.</td></tr>');
+                return;
+            }
+
+            const currentUserId = Auth.getUser().id;
+
+            const html = users.map(user => `
+                <tr>
+                    <td>#${user.id}</td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <img src="${user.avatar || 'images/default.jpg'}" 
+                                 alt="" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;"
+                                 onerror="this.src='images/default.jpg'">
+                            ${user.first_name} ${user.last_name}
+                        </div>
+                    </td>
+                    <td>${user.username}</td>
+                    <td>${user.email}</td>
+                    <td>${App.getRoleBadge(user.role)}</td>
+                    <td>${user.is_verified ? '<span class="text-success">✓ Yes</span>' : '<span class="text-danger">✗ No</span>'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline" onclick="editUser(${user.id})">Edit</button>
+                        ${user.id !== currentUserId ? `<button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})">Delete</button>` : ''}
+                    </td>
+                </tr>
+            `).join('');
+
+            $('#users-body').html(html);
+        }
+
+        async function editUser(id) {
+            try {
+                const response = await API.get(`/users/${id}`);
+                const user = response.data;
+
+                $('#user-id').val(user.id);
+                $('#user-first-name').val(user.first_name);
+                $('#user-last-name').val(user.last_name);
+                $('#user-username').val(user.username);
+                $('#user-email').val(user.email);
+                $('#user-role').val(user.role);
+                $('#user-verified').prop('checked', user.is_verified);
+                $('#user-error').hide();
+
+                // Disable role change for self
+                if (user.id === Auth.getUser().id) {
+                    $('#user-role').prop('disabled', true);
+                } else {
+                    $('#user-role').prop('disabled', false);
+                }
+
+                $('#user-modal').show();
+            } catch (error) {
+                App.showError(Messages.user.notFound);
+            }
+        }
+
+        async function saveUser() {
+            const $btn = $('#save-user-btn');
+            const $error = $('#user-error');
+            
+            $error.hide();
+            $btn.prop('disabled', true).text('Saving...');
+
+            try {
+                const userId = $('#user-id').val();
+                const response = await API.put(`/users/${userId}`, {
+                    first_name: $('#user-first-name').val(),
+                    last_name: $('#user-last-name').val(),
+                    username: $('#user-username').val(),
+                    role: $('#user-role').val(),
+                    is_verified: $('#user-verified').is(':checked')
+                });
+
+                if (response.success) {
+                    $('#user-modal').hide();
+                    App.showSuccess(Messages.user.updateSuccess);
+                    loadUsers(currentPage);
+                }
+            } catch (error) {
+                if (error.errors) {
+                    API.showValidationErrors(error.errors, 'user-form');
+                }
+                $error.text(Messages.getErrorMessage(error)).show();
+            } finally {
+                $btn.prop('disabled', false).text('Save Changes');
+            }
+        }
+
+        async function deleteUser(id) {
+            App.confirm(Messages.general.confirmDelete, async () => {
+                try {
+                    await API.delete(`/users/${id}`);
+                    App.showSuccess(Messages.user.deleteSuccess);
+                    loadUsers(currentPage);
+                } catch (error) {
+                    App.showError(Messages.getErrorMessage(error));
+                }
+            });
+        }
+    </script>
+</body>
+</html>
+
