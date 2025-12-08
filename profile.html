@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - ATV Rental System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Page Loader -->
+    <div class="page-loader" id="page-loader">
+        <div class="spinner-large"></div>
+    </div>
+    
+    <script>
+        // Hide loader when DOM is ready (fallback)
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                var loader = document.getElementById('page-loader');
+                if (loader) loader.classList.add('hidden');
+            }, 300);
+        });
+    </script>
+
+    <div class="page-wrapper">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="container">
+                <a href="dashboard.html" class="navbar-brand">🏍️ ATV Rental</a>
+                <button class="nav-toggle" onclick="$('.navbar-nav').toggleClass('active')">☰</button>
+                <ul class="navbar-nav">
+                    <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+                    <li><a href="atvs.html" class="nav-link">ATVs</a></li>
+                    <li><a href="rentals.html" class="nav-link">Rentals</a></li>
+                    <li class="nav-admin"><a href="users.html" class="nav-link">Users</a></li>
+                    <li><a href="profile.html" class="nav-link active">Profile</a></li>
+                    <li><a href="#" class="nav-link" onclick="Auth.logout(); return false;">Logout</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container">
+                <!-- Profile Header -->
+                <div class="profile-header">
+                    <div class="profile-avatar-wrapper">
+                        <img src="" alt="Avatar" class="profile-avatar" id="profile-avatar">
+                    </div>
+                    <div class="profile-info">
+                        <h2 id="profile-name"></h2>
+                        <p id="profile-email"></p>
+                        <div id="profile-role"></div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 2rem;">
+                    <!-- Update Profile Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 style="margin: 0; color: white;">Update Profile</h3>
+                        </div>
+                        <div class="card-body">
+                            <form id="profile-form">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                    <div class="form-group">
+                                        <label class="form-label">First Name</label>
+                                        <input type="text" class="form-control" id="first_name" name="first_name" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Last Name</label>
+                                        <input type="text" class="form-control" id="last_name" name="last_name" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Username</label>
+                                    <input type="text" class="form-control" id="username" name="username" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="email" disabled>
+                                    <small class="form-text">Email cannot be changed.</small>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Address</label>
+                                    <textarea class="form-control" id="address" name="address" rows="2"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Avatar</label>
+                                    <div class="file-input-wrapper">
+                                        <input type="file" id="avatar" name="avatar" accept="image/*">
+                                        <label class="file-input-label">
+                                            <span id="avatar-label">Click to upload new avatar</span>
+                                        </label>
+                                    </div>
+                                    <img id="avatar-preview" src="" alt="" style="max-width: 100px; margin-top: 10px; display: none; border-radius: 50%;">
+                                </div>
+                                <div id="profile-error" class="error-message mb-2" style="display: none;"></div>
+                                <button type="submit" class="btn btn-primary btn-block" id="profile-btn">
+                                    Update Profile
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Change Password Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 style="margin: 0; color: white;">Change Password</h3>
+                        </div>
+                        <div class="card-body">
+                            <form id="password-form">
+                                <div class="form-group">
+                                    <label class="form-label">Current Password</label>
+                                    <input type="password" class="form-control" id="current_password" 
+                                           name="current_password" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">New Password</label>
+                                    <input type="password" class="form-control" id="new_password" 
+                                           name="password" required minlength="8">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Confirm New Password</label>
+                                    <input type="password" class="form-control" id="password_confirmation" 
+                                           name="password_confirmation" required>
+                                </div>
+                                <div id="password-error" class="error-message mb-2" style="display: none;"></div>
+                                <div id="password-success" class="text-success mb-2" style="display: none;"></div>
+                                <button type="submit" class="btn btn-primary btn-block" id="password-btn">
+                                    Change Password
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/messages.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Hide page loader
+            $('#page-loader').addClass('hidden');
+            
+            if (!Auth.requireAuth()) return;
+
+            if (Auth.isAdmin()) {
+                $('.nav-admin').show();
+            }
+
+            loadProfile();
+
+            // Avatar preview
+            $('#avatar').on('change', function() {
+                App.previewImage(this, '#avatar-preview');
+                $('#avatar-preview').show();
+                $('#avatar-label').text(this.files[0].name);
+            });
+
+            // Update profile form
+            $('#profile-form').on('submit', async function(e) {
+                e.preventDefault();
+                
+                const $btn = $('#profile-btn');
+                const $error = $('#profile-error');
+                
+                $error.hide();
+                $btn.prop('disabled', true).text('Updating...');
+
+                const formData = new FormData();
+                formData.append('first_name', $('#first_name').val());
+                formData.append('last_name', $('#last_name').val());
+                formData.append('username', $('#username').val());
+                formData.append('address', $('#address').val());
+                
+                if ($('#avatar')[0].files[0]) {
+                    formData.append('avatar', $('#avatar')[0].files[0]);
+                }
+
+                try {
+                    const response = await API.upload('/profile', formData);
+                    
+                    if (response.success) {
+                        // Update stored user data
+                        Auth.saveUser(response.data);
+                        App.showSuccess(Messages.profile.updateSuccess);
+                        loadProfile();
+                    }
+                } catch (error) {
+                    if (error.errors) {
+                        API.showValidationErrors(error.errors, 'profile-form');
+                    }
+                    $error.text(Messages.getErrorMessage(error)).show();
+                } finally {
+                    $btn.prop('disabled', false).text('Update Profile');
+                }
+            });
+
+            // Change password form
+            $('#password-form').on('submit', async function(e) {
+                e.preventDefault();
+                
+                const $btn = $('#password-btn');
+                const $error = $('#password-error');
+                const $success = $('#password-success');
+                
+                $error.hide();
+                $success.hide();
+
+                // Validate passwords match
+                if ($('#new_password').val() !== $('#password_confirmation').val()) {
+                    $error.text(Messages.auth.passwordMismatch).show();
+                    return;
+                }
+
+                $btn.prop('disabled', true).text('Changing...');
+
+                try {
+                    const response = await API.post('/change-password', {
+                        current_password: $('#current_password').val(),
+                        password: $('#new_password').val(),
+                        password_confirmation: $('#password_confirmation').val()
+                    });
+
+                    if (response.success) {
+                        $success.text(Messages.auth.passwordChangeSuccess).show();
+                        $('#password-form')[0].reset();
+                    }
+                } catch (error) {
+                    $error.text(Messages.getErrorMessage(error)).show();
+                } finally {
+                    $btn.prop('disabled', false).text('Change Password');
+                }
+            });
+        });
+
+        async function loadProfile() {
+            try {
+                const response = await API.get('/profile');
+                const user = response.data;
+
+                // Update header
+                $('#profile-avatar').attr('src', user.avatar || 'images/default.jpg');
+                $('#profile-name').text(`${user.first_name} ${user.last_name}`);
+                $('#profile-email').text(user.email);
+                $('#profile-role').html(App.getRoleBadge(user.role));
+
+                // Populate form
+                $('#first_name').val(user.first_name);
+                $('#last_name').val(user.last_name);
+                $('#username').val(user.username);
+                $('#email').val(user.email);
+                $('#address').val(user.address);
+                
+                if (user.avatar) {
+                    $('#avatar-preview').attr('src', user.avatar).show();
+                }
+            } catch (error) {
+                App.showError(Messages.profile.updateFailed);
+            }
+        }
+    </script>
+</body>
+</html>
+

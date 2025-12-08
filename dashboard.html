@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - ATV Rental System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Page Loader -->
+    <div class="page-loader" id="page-loader">
+        <div class="spinner-large"></div>
+    </div>
+    
+    <script>
+        // Hide loader when DOM is ready (fallback)
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                var loader = document.getElementById('page-loader');
+                if (loader) loader.classList.add('hidden');
+            }, 300);
+        });
+    </script>
+
+    <div class="page-wrapper">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="container">
+                <a href="dashboard.html" class="navbar-brand">🏍️ ATV Rental</a>
+                <button class="nav-toggle" onclick="$('.navbar-nav').toggleClass('active')">☰</button>
+                <ul class="navbar-nav">
+                    <li><a href="dashboard.html" class="nav-link active">Dashboard</a></li>
+                    <li><a href="atvs.html" class="nav-link">ATVs</a></li>
+                    <li><a href="rentals.html" class="nav-link">Rentals</a></li>
+                    <li class="nav-admin"><a href="users.html" class="nav-link">Users</a></li>
+                    <li><a href="profile.html" class="nav-link">Profile</a></li>
+                    <li><a href="#" class="nav-link" onclick="Auth.logout(); return false;">Logout</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container">
+                <!-- Welcome Header -->
+                <div class="card mb-4" style="background: linear-gradient(135deg, var(--primary-color), var(--primary-light)); color: white; border: none;">
+                    <div class="card-body" style="padding: 2rem;">
+                        <h1 style="margin: 0 0 0.5rem 0; color: white;">Welcome back, <span id="user-name"></span>!</h1>
+                        <p style="margin: 0; opacity: 0.9;">Role: <span id="user-role-badge"></span></p>
+                    </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="stats-grid mb-4" id="stats-grid">
+                    <!-- Stats will be loaded dynamically -->
+                </div>
+
+                <!-- Content Grid -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <!-- Customer: Recent Rentals -->
+                    <div class="card" id="customer-section" style="display: none;">
+                        <div class="card-header">
+                            <h3 style="margin: 0; color: white;">Your Recent Rentals</h3>
+                        </div>
+                        <div class="card-body" id="recent-rentals">
+                            <div class="text-center text-muted">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Manager/Admin: Pending Approvals -->
+                    <div class="card" id="manager-section" style="display: none;">
+                        <div class="card-header">
+                            <h3 style="margin: 0; color: white;">Pending Requests</h3>
+                        </div>
+                        <div class="card-body" id="pending-rentals">
+                            <div class="text-center text-muted">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 style="margin: 0; color: white;">Quick Actions</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex gap-2" style="flex-wrap: wrap;">
+                            <a href="atvs.html" class="btn btn-primary">Browse ATVs</a>
+                            <a href="rentals.html" class="btn btn-secondary">View Rentals</a>
+                            <a href="atvs.html?action=create" class="btn btn-success nav-manage" style="display: none;">Add New ATV</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/messages.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        $(document).ready(async function() {
+            // Hide page loader
+            $('#page-loader').addClass('hidden');
+            
+            // Require authentication
+            if (!Auth.requireAuth()) return;
+
+            const user = Auth.getUser();
+            
+            // Update UI
+            $('#user-name').text(user.first_name);
+            $('#user-role-badge').html(App.getRoleBadge(user.role));
+            
+            // Show role-specific sections
+            if (Auth.canManage()) {
+                $('.nav-manage').show();
+                $('#manager-section').show();
+                loadPendingRentals();
+            }
+            
+            if (Auth.isAdmin()) {
+                $('.nav-admin').show();
+            }
+            
+            if (Auth.isCustomer()) {
+                $('#customer-section').show();
+                loadRecentRentals();
+            }
+
+            // Load stats
+            loadStats();
+        });
+
+        async function loadStats() {
+            const statsHtml = [];
+            
+            try {
+                // Load ATVs count
+                const atvResponse = await API.get('/atvs', { per_page: 1 });
+                const totalAtvs = atvResponse.pagination?.total || 0;
+                const availableAtvs = await API.get('/atvs', { status: 'available', per_page: 1 });
+                
+                statsHtml.push(`
+                    <div class="stat-card">
+                        <div class="stat-value">${availableAtvs.pagination?.total || 0}</div>
+                        <div class="stat-label">Available ATVs</div>
+                    </div>
+                `);
+                
+                statsHtml.push(`
+                    <div class="stat-card">
+                        <div class="stat-value">${totalAtvs}</div>
+                        <div class="stat-label">Total Fleet</div>
+                    </div>
+                `);
+
+                // Load rentals for user
+                const rentalsResponse = await API.get('/rentals', { per_page: 1 });
+                statsHtml.push(`
+                    <div class="stat-card">
+                        <div class="stat-value">${rentalsResponse.pagination?.total || 0}</div>
+                        <div class="stat-label">${Auth.isCustomer() ? 'Your Rentals' : 'Total Rentals'}</div>
+                    </div>
+                `);
+
+                if (Auth.canManage()) {
+                    const pendingResponse = await API.get('/rentals', { status: 'pending', per_page: 1 });
+                    statsHtml.push(`
+                        <div class="stat-card">
+                            <div class="stat-value">${pendingResponse.pagination?.total || 0}</div>
+                            <div class="stat-label">Pending Requests</div>
+                        </div>
+                    `);
+                }
+
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+
+            $('#stats-grid').html(statsHtml.join(''));
+        }
+
+        async function loadRecentRentals() {
+            try {
+                const response = await API.get('/rentals', { per_page: 5 });
+                
+                if (response.data && response.data.length > 0) {
+                    let html = '<div class="table-responsive"><table class="table" style="margin-bottom: 1rem;"><thead><tr>';
+                    html += '<th>ATV</th><th>Status</th><th>Date</th><th>Price</th></tr></thead><tbody>';
+                    
+                    response.data.forEach(rental => {
+                        html += `<tr>
+                            <td>${rental.atv.name}</td>
+                            <td>${App.getStatusBadge(rental.status)}</td>
+                            <td>${App.formatDate(rental.start_time)}</td>
+                            <td>${App.formatCurrency(rental.total_price)}</td>
+                        </tr>`;
+                    });
+                    
+                    html += '</tbody></table></div>';
+                    html += '<div class="text-center"><a href="rentals.html" class="btn btn-outline">View All Rentals</a></div>';
+                    $('#recent-rentals').html(html);
+                } else {
+                    $('#recent-rentals').html('<div class="empty-state"><p>No rentals yet. <a href="atvs.html">Browse ATVs</a> to get started!</p></div>');
+                }
+            } catch (error) {
+                $('#recent-rentals').html(`<div class="text-danger">${Messages.rental.loadFailed}</div>`);
+            }
+        }
+
+        async function loadPendingRentals() {
+            try {
+                const response = await API.get('/rentals', { status: 'pending', per_page: 5 });
+                
+                if (response.data && response.data.length > 0) {
+                    let html = '<div class="table-responsive"><table class="table" style="margin-bottom: 1rem;"><thead><tr>';
+                    html += '<th>Customer</th><th>ATV</th><th>Date</th><th>Actions</th></tr></thead><tbody>';
+                    
+                    response.data.forEach(rental => {
+                        html += `<tr>
+                            <td>${rental.user.name}</td>
+                            <td>${rental.atv.name}</td>
+                            <td>${App.formatDate(rental.start_time)}</td>
+                            <td>
+                                <button class="btn btn-sm btn-success" onclick="updateRentalStatus(${rental.id}, 'approved')">Approve</button>
+                                <button class="btn btn-sm btn-danger" onclick="updateRentalStatus(${rental.id}, 'denied')">Deny</button>
+                            </td>
+                        </tr>`;
+                    });
+                    
+                    html += '</tbody></table></div>';
+                    html += '<div class="text-center"><a href="rentals.html?status=pending" class="btn btn-outline">View All Pending</a></div>';
+                    $('#pending-rentals').html(html);
+                } else {
+                    $('#pending-rentals').html('<div class="empty-state"><p>No pending requests.</p></div>');
+                }
+            } catch (error) {
+                $('#pending-rentals').html(`<div class="text-danger">${Messages.rental.loadFailed}</div>`);
+            }
+        }
+
+        async function updateRentalStatus(id, status) {
+            try {
+                await API.put(`/rentals/${id}/status`, { status });
+                App.showSuccess(Messages.rental.updateStatusSuccess);
+                loadPendingRentals();
+                loadStats();
+            } catch (error) {
+                App.showError(Messages.getErrorMessage(error));
+            }
+        }
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATVs - ATV Rental System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Page Loader -->
+    <div class="page-loader" id="page-loader">
+        <div class="spinner-large"></div>
+    </div>
+    
+    <script>
+        // Hide loader when DOM is ready (fallback)
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                var loader = document.getElementById('page-loader');
+                if (loader) loader.classList.add('hidden');
+            }, 300);
+        });
+    </script>
+
+    <div class="page-wrapper">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="container">
+                <a href="dashboard.html" class="navbar-brand">🏍️ ATV Rental</a>
+                <button class="nav-toggle" onclick="$('.navbar-nav').toggleClass('active')">☰</button>
+                <ul class="navbar-nav nav-user">
+                    <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+                    <li><a href="atvs.html" class="nav-link active">ATVs</a></li>
+                    <li><a href="rentals.html" class="nav-link">Rentals</a></li>
+                    <li class="nav-admin"><a href="users.html" class="nav-link">Users</a></li>
+                    <li><a href="profile.html" class="nav-link">Profile</a></li>
+                    <li><a href="#" class="nav-link" onclick="Auth.logout(); return false;">Logout</a></li>
+                </ul>
+                <ul class="navbar-nav nav-guest">
+                    <li><a href="index.html" class="nav-link">Login</a></li>
+                    <li><a href="register.html" class="nav-link">Register</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container">
+                <div class="d-flex justify-between align-center mb-4" style="flex-wrap: wrap; gap: 1rem;">
+                    <h1>ATV Fleet</h1>
+                    <button class="btn btn-success nav-manage" style="display: none;" onclick="showAtvModal()">
+                        + Add New ATV
+                    </button>
+                </div>
+
+                <!-- Search & Filters -->
+                <div class="search-bar">
+                    <div class="search-input-wrapper">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" class="form-control" id="search-input" 
+                               placeholder="Search ATVs by name or type...">
+                    </div>
+                    <div class="filter-group">
+                        <select class="form-control" id="status-filter">
+                            <option value="">All Status</option>
+                            <option value="available">Available</option>
+                            <option value="rented">Rented</option>
+                            <option value="maintenance">Maintenance</option>
+                        </select>
+                        <select class="form-control" id="type-filter">
+                            <option value="">All Types</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- ATV Grid -->
+                <div class="atv-grid" id="atv-grid">
+                    <div class="text-center text-muted" style="grid-column: 1/-1;">Loading ATVs...</div>
+                </div>
+
+                <!-- Pagination -->
+                <div id="pagination"></div>
+            </div>
+        </main>
+
+        <!-- Rental Modal -->
+        <div id="rental-modal" class="modal-overlay" style="display: none;">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3>Rent ATV</h3>
+                    <button class="modal-close" onclick="$('#rental-modal').hide()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="rental-atv-info"></div>
+                    <form id="rental-form">
+                        <input type="hidden" id="rental-atv-id">
+                        <div class="form-group">
+                            <label class="form-label">Start Date & Time</label>
+                            <input type="datetime-local" class="form-control" id="rental-start" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">End Date & Time</label>
+                            <input type="datetime-local" class="form-control" id="rental-end" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Notes (Optional)</label>
+                            <textarea class="form-control" id="rental-notes" rows="2" 
+                                      placeholder="Any special requests?"></textarea>
+                        </div>
+                        <div id="rental-price-preview" class="mb-3"></div>
+                        <div id="rental-error" class="error-message mb-2" style="display: none;"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="$('#rental-modal').hide()">Cancel</button>
+                    <button class="btn btn-primary" id="submit-rental-btn" onclick="submitRental()">Submit Request</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ATV Form Modal -->
+        <div id="atv-modal" class="modal-overlay" style="display: none;">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3 id="atv-modal-title">Add New ATV</h3>
+                    <button class="modal-close" onclick="$('#atv-modal').hide()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="atv-form" enctype="multipart/form-data">
+                        <input type="hidden" id="atv-id">
+                        <div class="form-group">
+                            <label class="form-label">Name</label>
+                            <input type="text" class="form-control" id="atv-name" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Type</label>
+                            <input type="text" class="form-control" id="atv-type" name="type" 
+                                   placeholder="e.g., 450cc Sport, 250cc Utility" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Serial Number / VIN</label>
+                            <input type="text" class="form-control" id="atv-serial" name="serial_number" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Hourly Price ($)</label>
+                            <input type="number" class="form-control" id="atv-price" name="hourly_price" 
+                                   step="0.01" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Status</label>
+                            <select class="form-control" id="atv-status" name="status">
+                                <option value="available">Available</option>
+                                <option value="maintenance">Maintenance</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" id="atv-description" name="description" rows="2"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Image</label>
+                            <div class="file-input-wrapper">
+                                <input type="file" id="atv-image" name="image" accept="image/*">
+                                <label class="file-input-label">
+                                    <span id="atv-image-label">Click to upload image</span>
+                                </label>
+                            </div>
+                            <img id="atv-image-preview" src="" alt="" style="max-width: 200px; margin-top: 10px; display: none;">
+                        </div>
+                        <div id="atv-error" class="error-message mb-2" style="display: none;"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="$('#atv-modal').hide()">Cancel</button>
+                    <button class="btn btn-primary" id="save-atv-btn" onclick="saveAtv()">Save ATV</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/messages.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        let currentPage = 1;
+        let currentAtvPrice = 0;
+
+        $(document).ready(function() {
+            // Hide page loader
+            $('#page-loader').addClass('hidden');
+            
+            // Setup navigation based on auth state
+            if (Auth.isAuthenticated()) {
+                $('.nav-guest').hide();
+                $('.nav-user').show();
+                if (Auth.canManage()) {
+                    $('.nav-manage').show();
+                }
+                if (Auth.isAdmin()) {
+                    $('.nav-admin').show();
+                }
+            } else {
+                $('.nav-guest').show();
+                $('.nav-user').hide();
+            }
+
+            loadAtvs();
+            loadTypes();
+
+            // Search with debounce
+            const debouncedSearch = App.debounce(() => loadAtvs(1), 300);
+            $('#search-input').on('input', debouncedSearch);
+
+            // Filter change
+            $('#status-filter, #type-filter').on('change', () => loadAtvs(1));
+
+            // Image preview
+            $('#atv-image').on('change', function() {
+                App.previewImage(this, '#atv-image-preview');
+                $('#atv-image-preview').show();
+                $('#atv-image-label').text(this.files[0].name);
+            });
+
+            // Calculate rental price
+            $('#rental-start, #rental-end').on('change', calculateRentalPrice);
+        });
+
+        async function loadAtvs(page = 1) {
+            currentPage = page;
+            const params = {
+                page: page,
+                per_page: 12,
+                search: $('#search-input').val(),
+                status: $('#status-filter').val(),
+                type: $('#type-filter').val()
+            };
+
+            try {
+                const response = await API.get('/atvs', params);
+                renderAtvs(response.data);
+                $('#pagination').html(App.buildPagination(response.pagination));
+                
+                // Attach pagination click handlers
+                $('.page-btn').on('click', function() {
+                    loadAtvs($(this).data('page'));
+                });
+            } catch (error) {
+                $('#atv-grid').html(`<div class="text-danger" style="grid-column: 1/-1;">${Messages.atv.loadFailed}</div>`);
+            }
+        }
+
+        async function loadTypes() {
+            try {
+                const response = await API.get('/atvs/types');
+                if (response.data && response.data.length) {
+                    response.data.forEach(type => {
+                        $('#type-filter').append(`<option value="${type}">${type}</option>`);
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load types:', error);
+            }
+        }
+
+        function renderAtvs(atvs) {
+            if (!atvs || atvs.length === 0) {
+                $('#atv-grid').html('<div class="empty-state" style="grid-column: 1/-1;"><h3>No ATVs found</h3><p>Try adjusting your search or filters.</p></div>');
+                return;
+            }
+
+            const html = atvs.map(atv => `
+                <div class="atv-card">
+                    <div class="atv-card-image">
+                        <img src="${atv.image || 'images/default.jpg'}" alt="${atv.name}" 
+                             onerror="this.src='images/default.jpg'">
+                        <div class="atv-card-status">${App.getStatusBadge(atv.status)}</div>
+                    </div>
+                    <div class="atv-card-content">
+                        <h3 class="atv-card-title">${atv.name}</h3>
+                        <p class="atv-card-type">${atv.type}</p>
+                        <div class="atv-card-price">
+                            ${App.formatCurrency(atv.hourly_price)} <span>/hour</span>
+                        </div>
+                        <div class="atv-card-actions">
+                            ${atv.status === 'available' && Auth.isAuthenticated() 
+                                ? `<button class="btn btn-primary" onclick="showRentalModal(${atv.id}, '${atv.name}', ${atv.hourly_price})">Rent Now</button>` 
+                                : ''}
+                            ${Auth.canManage() 
+                                ? `<button class="btn btn-outline" onclick="editAtv(${atv.id})">Edit</button>
+                                   <button class="btn btn-danger btn-sm" onclick="deleteAtv(${atv.id})">Delete</button>` 
+                                : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            $('#atv-grid').html(html);
+        }
+
+        function showRentalModal(atvId, atvName, price) {
+            if (!Auth.isAuthenticated()) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            currentAtvPrice = price;
+            $('#rental-atv-id').val(atvId);
+            $('#rental-atv-info').html(`<p><strong>ATV:</strong> ${atvName}</p><p><strong>Rate:</strong> ${App.formatCurrency(price)}/hour</p>`);
+            
+            // Set minimum datetime to now
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            const minDateTime = now.toISOString().slice(0, 16);
+            $('#rental-start').attr('min', minDateTime);
+            $('#rental-end').attr('min', minDateTime);
+            
+            // Clear form
+            $('#rental-form')[0].reset();
+            $('#rental-price-preview').html('');
+            $('#rental-error').hide();
+            
+            $('#rental-modal').show();
+        }
+
+        function calculateRentalPrice() {
+            const start = new Date($('#rental-start').val());
+            const end = new Date($('#rental-end').val());
+            
+            if (start && end && end > start) {
+                const hours = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60)));
+                const total = hours * currentAtvPrice;
+                $('#rental-price-preview').html(`
+                    <div class="card" style="background: #f8f9fa;">
+                        <div class="card-body">
+                            <p><strong>Duration:</strong> ${hours} hour(s)</p>
+                            <p><strong>Estimated Total:</strong> <span style="font-size: 1.5rem; color: var(--primary-color);">${App.formatCurrency(total)}</span></p>
+                        </div>
+                    </div>
+                `);
+            }
+        }
+
+        async function submitRental() {
+            const $btn = $('#submit-rental-btn');
+            const $error = $('#rental-error');
+            
+            $error.hide();
+            $btn.prop('disabled', true).text('Submitting...');
+
+            try {
+                const response = await API.post('/rentals', {
+                    atv_id: $('#rental-atv-id').val(),
+                    start_time: $('#rental-start').val(),
+                    end_time: $('#rental-end').val(),
+                    notes: $('#rental-notes').val()
+                });
+
+                if (response.success) {
+                    $('#rental-modal').hide();
+                    App.showSuccess(Messages.rental.createSuccess);
+                    loadAtvs(currentPage);
+                }
+            } catch (error) {
+                $error.text(Messages.getErrorMessage(error)).show();
+            } finally {
+                $btn.prop('disabled', false).text('Submit Request');
+            }
+        }
+
+        function showAtvModal(atvId = null) {
+            $('#atv-form')[0].reset();
+            $('#atv-id').val('');
+            $('#atv-error').hide();
+            $('#atv-image-preview').hide();
+            $('#atv-image-label').text('Click to upload image');
+            
+            if (atvId) {
+                $('#atv-modal-title').text('Edit ATV');
+            } else {
+                $('#atv-modal-title').text('Add New ATV');
+            }
+            
+            $('#atv-modal').show();
+        }
+
+        async function editAtv(id) {
+            try {
+                const response = await API.get(`/atvs/${id}`);
+                const atv = response.data;
+                
+                $('#atv-id').val(atv.id);
+                $('#atv-name').val(atv.name);
+                $('#atv-type').val(atv.type);
+                $('#atv-serial').val(atv.serial_number);
+                $('#atv-price').val(atv.hourly_price);
+                $('#atv-status').val(atv.status);
+                $('#atv-description').val(atv.description);
+                
+                if (atv.image) {
+                    $('#atv-image-preview').attr('src', atv.image).show();
+                }
+                
+                $('#atv-modal-title').text('Edit ATV');
+                $('#atv-modal').show();
+            } catch (error) {
+                App.showError(Messages.atv.notFound);
+            }
+        }
+
+        async function saveAtv() {
+            const $btn = $('#save-atv-btn');
+            const $error = $('#atv-error');
+            
+            $error.hide();
+            $btn.prop('disabled', true).text('Saving...');
+
+            const formData = new FormData();
+            formData.append('name', $('#atv-name').val());
+            formData.append('type', $('#atv-type').val());
+            formData.append('serial_number', $('#atv-serial').val());
+            formData.append('hourly_price', $('#atv-price').val());
+            formData.append('status', $('#atv-status').val());
+            formData.append('description', $('#atv-description').val());
+            
+            if ($('#atv-image')[0].files[0]) {
+                formData.append('image', $('#atv-image')[0].files[0]);
+            }
+
+            try {
+                const atvId = $('#atv-id').val();
+                let endpoint = '/atvs';
+                
+                if (atvId) {
+                    endpoint = `/atvs/${atvId}`;
+                }
+
+                const response = await API.upload(endpoint, formData);
+
+                if (response.success) {
+                    $('#atv-modal').hide();
+                    App.showSuccess(atvId ? Messages.atv.updateSuccess : Messages.atv.createSuccess);
+                    loadAtvs(currentPage);
+                }
+            } catch (error) {
+                if (error.errors) {
+                    API.showValidationErrors(error.errors, 'atv-form');
+                }
+                $error.text(Messages.getErrorMessage(error)).show();
+            } finally {
+                $btn.prop('disabled', false).text('Save ATV');
+            }
+        }
+
+        async function deleteAtv(id) {
+            App.confirm(Messages.general.confirmDelete, async () => {
+                try {
+                    await API.delete(`/atvs/${id}`);
+                    App.showSuccess(Messages.atv.deleteSuccess);
+                    loadAtvs(currentPage);
+                } catch (error) {
+                    App.showError(Messages.getErrorMessage(error));
+                }
+            });
+        }
+    </script>
+</body>
+</html>
+
