@@ -335,47 +335,38 @@ select.form-control {
 }
 
 .password-wrapper .form-control {
-    padding-right: 45px;
+    padding-right: 40px;
 }
 
 .password-toggle {
     position: absolute;
-    right: 12px;
+    right: 8px;
     top: 50%;
     transform: translateY(-50%);
     background: none;
     border: none;
     cursor: pointer;
-    padding: 4px 8px;
+    padding: 0;
     color: var(--text-muted);
-    font-size: 1.1rem;
-    transition: color var(--transition-fast);
+    font-size: 1rem;
+    line-height: 1;
+    width: 24px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: var(--radius-sm);
 }
 
 .password-toggle:hover {
     color: var(--primary-color);
-    background: rgba(45, 90, 39, 0.1);
 }
 
 .password-toggle:focus {
     outline: none;
-    color: var(--primary-color);
-    background: rgba(45, 90, 39, 0.15);
 }
 
 .password-toggle-icon {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
+    font-size: 1rem;
 }
 
 /* File Input */
