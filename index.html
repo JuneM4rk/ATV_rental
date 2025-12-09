@@ -39,6 +39,10 @@
                         <label class="form-label" for="password">Password</label>
                         <input type="password" class="form-control" id="password" name="password" 
                                placeholder="Enter password" required>
+                        <label class="show-password-label">
+                            <input type="checkbox" id="show-password" class="show-password-checkbox">
+                            Show Password
+                        </label>
                     </div>
                     <div id="login-success" class="text-success mb-2" style="display: none; padding: 0.75rem; background: #d4edda; border-radius: 4px;"></div>
                     <div id="login-error" class="error-message mb-2" style="display: none;"></div>
@@ -64,6 +68,16 @@
     <script src="js/api.js"></script>
     <script>
         $(document).ready(function() {
+            // Toggle password visibility
+            $('#show-password').on('change', function() {
+                const passwordInput = $('#password');
+                if ($(this).is(':checked')) {
+                    passwordInput.attr('type', 'text');
+                } else {
+                    passwordInput.attr('type', 'password');
+                }
+            });
+
             // Redirect if already logged in
             Auth.redirectIfAuthenticated();
 
