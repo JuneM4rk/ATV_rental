@@ -332,41 +332,28 @@ select.form-control {
 /* Password Input with Toggle */
 .password-wrapper {
     position: relative;
+    display: inline-block;
+    width: 100%;
 }
 
 .password-wrapper .form-control {
     padding-right: 40px;
 }
 
-.password-toggle {
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
+.field-icon {
+    float: right;
+    margin-left: -30px;
+    margin-top: -32px;
+    position: relative;
+    z-index: 2;
     cursor: pointer;
-    padding: 0;
     color: var(--text-muted);
     font-size: 1rem;
-    line-height: 1;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    padding: 8px;
 }
 
-.password-toggle:hover {
+.field-icon:hover {
     color: var(--primary-color);
-}
-
-.password-toggle:focus {
-    outline: none;
-}
-
-.password-toggle-icon {
-    font-size: 1rem;
 }
 
 /* File Input */
