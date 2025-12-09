@@ -199,6 +199,7 @@ const App = {
             'pending': 'badge-info',
             'approved': 'badge-success',
             'denied': 'badge-danger',
+            'cancelled': 'badge-danger',
             'pending_return': 'badge-warning',
             'returned': 'badge-secondary'
         };
@@ -210,6 +211,7 @@ const App = {
             'pending': 'Pending',
             'approved': 'Approved',
             'denied': 'Denied',
+            'cancelled': 'Cancelled',
             'pending_return': 'Pending Return',
             'returned': 'Returned'
         };
