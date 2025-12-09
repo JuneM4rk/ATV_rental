@@ -58,6 +58,16 @@
                                   placeholder="Your address" rows="2"></textarea>
                     </div>
                     <div class="form-group">
+                        <label class="form-label" for="avatar">Profile Image (Optional)</label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="avatar" name="avatar" accept="image/*">
+                            <label class="file-input-label" for="avatar">
+                                <span id="avatar-label">Click to upload profile image</span>
+                            </label>
+                        </div>
+                        <img id="avatar-preview" src="" alt="" style="max-width: 150px; margin-top: 10px; display: none; border-radius: 50%; border: 2px solid var(--primary-color);">
+                    </div>
+                    <div class="form-group">
                         <label class="form-label" for="password">Password</label>
                         <input type="password" class="form-control" id="password" name="password" 
                                placeholder="Minimum 8 characters" required minlength="8">
@@ -115,6 +125,15 @@
                 }
             });
 
+            // Avatar preview
+            $('#avatar').on('change', function() {
+                if (this.files && this.files[0]) {
+                    App.previewImage(this, '#avatar-preview');
+                    $('#avatar-preview').show();
+                    $('#avatar-label').text(this.files[0].name);
+                }
+            });
+
             // Hide page loader
             $('#page-loader').addClass('hidden');
             
@@ -143,19 +162,41 @@
                 }
 
                 try {
-                    const response = await API.post('/register', {
-                        first_name: $('#first_name').val(),
-                        last_name: $('#last_name').val(),
-                        username: $('#username').val(),
-                        email: $('#email').val(),
-                        address: $('#address').val(),
-                        password: $('#password').val(),
-                        password_confirmation: $('#password_confirmation').val()
-                    });
+                    // Check if avatar is selected
+                    const avatarFile = $('#avatar')[0].files[0];
+                    
+                    let response;
+                    if (avatarFile) {
+                        // Use FormData for file upload
+                        const formData = new FormData();
+                        formData.append('first_name', $('#first_name').val());
+                        formData.append('last_name', $('#last_name').val());
+                        formData.append('username', $('#username').val());
+                        formData.append('email', $('#email').val());
+                        formData.append('address', $('#address').val());
+                        formData.append('password', $('#password').val());
+                        formData.append('password_confirmation', $('#password_confirmation').val());
+                        formData.append('avatar', avatarFile);
+                        
+                        response = await API.upload('/register', formData);
+                    } else {
+                        // Use regular JSON for non-file upload
+                        response = await API.post('/register', {
+                            first_name: $('#first_name').val(),
+                            last_name: $('#last_name').val(),
+                            username: $('#username').val(),
+                            email: $('#email').val(),
+                            address: $('#address').val(),
+                            password: $('#password').val(),
+                            password_confirmation: $('#password_confirmation').val()
+                        });
+                    }
 
                     if (response.success) {
                         $success.text(Messages.auth.registerSuccess).show();
                         $('#register-form')[0].reset();
+                        $('#avatar-preview').hide().attr('src', '');
+                        $('#avatar-label').text('Click to upload profile image');
                     } else {
                         $error.text(response.message || Messages.auth.registerFailed).show();
                     }
