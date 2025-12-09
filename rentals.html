@@ -52,6 +52,7 @@
                             <option value="pending">Pending</option>
                             <option value="approved">Approved</option>
                             <option value="denied">Denied</option>
+                            <option value="cancelled">Cancelled</option>
                             <option value="rented">Rented</option>
                             <option value="pending_return">Pending Return</option>
                             <option value="returned">Returned</option>
@@ -214,7 +215,9 @@
                 }
             } else {
                 // Customer actions
-                if (rental.status === 'rented') {
+                if (rental.status === 'pending' || rental.status === 'approved') {
+                    buttons = `<button class="btn btn-sm btn-danger" onclick="cancelRental(${rental.id})">Cancel</button>`;
+                } else if (rental.status === 'rented') {
                     buttons = `<button class="btn btn-sm btn-warning" onclick="requestReturn(${rental.id})">Request Return</button>`;
                 }
             }
@@ -280,7 +283,12 @@
                             break;
                     }
                 } else {
-                    if (rental.status === 'rented') {
+                    if (rental.status === 'pending' || rental.status === 'approved') {
+                        actions = `
+                            <button class="btn btn-secondary" onclick="$('#rental-modal').hide()">Close</button>
+                            <button class="btn btn-danger" onclick="cancelRental(${rental.id}); $('#rental-modal').hide();">Cancel Rental</button>
+                        `;
+                    } else if (rental.status === 'rented') {
                         actions = `
                             <button class="btn btn-secondary" onclick="$('#rental-modal').hide()">Close</button>
                             <button class="btn btn-warning" onclick="requestReturn(${rental.id}); $('#rental-modal').hide();">Request Return</button>
@@ -299,6 +307,20 @@
             try {
                 await API.put(`/rentals/${id}/status`, { status });
                 App.showSuccess(Messages.rental.updateStatusSuccess);
+                loadRentals(currentPage);
+            } catch (error) {
+                App.showError(Messages.getErrorMessage(error));
+            }
+        }
+
+        async function cancelRental(id) {
+            if (!confirm('Are you sure you want to cancel this rental?')) {
+                return;
+            }
+
+            try {
+                await API.post(`/rentals/${id}/cancel`);
+                App.showSuccess('Rental cancelled successfully.');
                 loadRentals(currentPage);
             } catch (error) {
                 App.showError(Messages.getErrorMessage(error));
