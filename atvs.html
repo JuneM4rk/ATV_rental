@@ -285,7 +285,7 @@
                             ${App.formatCurrency(atv.hourly_price)} <span>/hour</span>
                         </div>
                         <div class="atv-card-actions">
-                            ${atv.status === 'available' && Auth.isAuthenticated() 
+                            ${atv.status === 'available' && Auth.isCustomer() 
                                 ? `<button class="btn btn-primary" onclick="showRentalModal(${atv.id}, '${atv.name}', ${atv.hourly_price})">Rent Now</button>` 
                                 : ''}
                             ${Auth.canManage() 
