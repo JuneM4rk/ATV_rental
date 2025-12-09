@@ -168,6 +168,24 @@
                 return;
             }
 
+            // Custom status order for consistent sorting
+            const statusOrder = {
+                pending: 1,
+                approved: 2,
+                denied: 3,
+                cancelled: 4,
+                rented: 5,
+                pending_return: 6,
+                returned: 7
+            };
+
+            rentals = [...rentals].sort((a, b) => {
+                const orderA = statusOrder[a.status] ?? 99;
+                const orderB = statusOrder[b.status] ?? 99;
+                if (orderA !== orderB) return orderA - orderB;
+                return b.id - a.id; // secondary: newest first within same status
+            });
+
             const isManager = Auth.canManage();
 
             const html = rentals.map(rental => `
