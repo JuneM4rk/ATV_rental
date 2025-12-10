@@ -124,12 +124,6 @@
                                 <option value="admin">Admin</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">
-                                <input type="checkbox" id="user-verified">
-                                Email Verified
-                            </label>
-                        </div>
                         <div id="user-error" class="error-message mb-2" style="display: none;"></div>
                     </form>
                 </div>
@@ -233,7 +227,6 @@
                 $('#user-username').val(user.username);
                 $('#user-email').val(user.email);
                 $('#user-role').val(user.role);
-                $('#user-verified').prop('checked', user.is_verified);
                 $('#user-error').hide();
 
                 // Disable role change for superadmin (ID 1) and self
@@ -262,8 +255,7 @@
                     first_name: $('#user-first-name').val(),
                     last_name: $('#user-last-name').val(),
                     username: $('#user-username').val(),
-                    role: $('#user-role').val(),
-                    is_verified: $('#user-verified').is(':checked')
+                    role: $('#user-role').val()
                 });
 
                 if (response.success) {
