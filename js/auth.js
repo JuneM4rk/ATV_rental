@@ -170,14 +170,40 @@ const Auth = {
     /**
      * Logout user
      */
-    async logout() {
-        try {
-            await API.post('/logout');
-        } catch (error) {
-            console.error('Logout error:', error);
-        } finally {
-            this.clear();
-            window.location.href = 'index.html';
+    async logout(showConfirmation = true) {
+        const performLogout = async () => {
+            try {
+                await API.post('/logout');
+                // Show success message if App and Messages are available
+                if (typeof App !== 'undefined' && typeof App.showSuccess === 'function' && 
+                    typeof Messages !== 'undefined' && Messages.auth) {
+                    App.showSuccess(Messages.auth.logoutSuccess);
+                    // Small delay to show the message before redirect
+                    setTimeout(() => {
+                        this.clear();
+                        window.location.href = 'index.html';
+                    }, 500);
+                } else {
+                    this.clear();
+                    window.location.href = 'index.html';
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+                // Still logout even if API call fails
+                this.clear();
+                window.location.href = 'index.html';
+            }
+        };
+
+        // Show confirmation dialog if requested and App is available
+        if (showConfirmation && typeof App !== 'undefined' && typeof App.confirm === 'function') {
+            App.confirm(
+                'Are you sure you want to logout?',
+                performLogout
+            );
+        } else {
+            // No confirmation, logout directly
+            performLogout();
         }
     }
 };
