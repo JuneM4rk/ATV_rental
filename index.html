@@ -101,13 +101,15 @@
                     });
 
                     if (Auth.handleLoginResponse(response)) {
-                        // Show toast notification for better visibility
-                        App.showSuccess(Messages.auth.loginSuccess);
-                        // Also show inline message as backup
+                        // Show success message
                         $('#login-success').text(Messages.auth.loginSuccess).show();
+                        // Show toast notification if App is available
+                        if (typeof App !== 'undefined' && typeof App.showSuccess === 'function') {
+                            App.showSuccess(Messages.auth.loginSuccess);
+                        }
                         setTimeout(() => {
                             window.location.href = 'dashboard.html';
-                        }, 1500); // Slightly longer to see the toast
+                        }, 1500);
                     } else {
                         $error.text(Messages.auth.loginFailed).show();
                     }
