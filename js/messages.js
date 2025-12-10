@@ -111,6 +111,11 @@ const Messages = {
             // Check for specific error messages
             const message = error.message.toLowerCase();
             
+            // Check for active rentals error first - return actual API message
+            if (message.includes('active rental') || message.includes('cannot delete user')) {
+                return error.message;
+            }
+            
             if (message.includes('invalid credential') || message.includes('invalid email')) {
                 return this.auth.loginFailed;
             }
@@ -141,14 +146,17 @@ const Messages = {
             if (error.status === 404) {
                 return this.general.notFound || 'Item not found.';
             }
-            if (error.status === 422) {
-                return this.general.validationError;
-            }
             if (error.status === 0 || error.status >= 500) {
                 return this.general.networkError;
             }
             
+            // Return the actual error message from API (including 422 errors with specific messages)
             return error.message;
+        }
+        
+        // If no message, check status codes
+        if (error.status === 422) {
+            return this.general.validationError;
         }
         
         return this.general.error;
