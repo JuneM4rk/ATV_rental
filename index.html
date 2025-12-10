@@ -100,10 +100,13 @@
                     });
 
                     if (Auth.handleLoginResponse(response)) {
+                        // Show toast notification for better visibility
+                        App.showSuccess(Messages.auth.loginSuccess);
+                        // Also show inline message as backup
                         $('#login-success').text(Messages.auth.loginSuccess).show();
                         setTimeout(() => {
                             window.location.href = 'dashboard.html';
-                        }, 1000);
+                        }, 1500); // Slightly longer to see the toast
                     } else {
                         $error.text(Messages.auth.loginFailed).show();
                     }
