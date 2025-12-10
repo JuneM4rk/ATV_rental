@@ -214,7 +214,7 @@
                     <td>${user.is_verified ? '<span class="text-success">✓ Yes</span>' : '<span class="text-danger">✗ No</span>'}</td>
                     <td>
                         <button class="btn btn-sm btn-outline" onclick="editUser(${user.id})">Edit</button>
-                        ${user.id !== currentUserId ? `<button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})">Delete</button>` : ''}
+                        ${user.id !== 1 && user.id !== currentUserId ? `<button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})">Delete</button>` : ''}
                     </td>
                 </tr>
             `).join('');
@@ -236,8 +236,8 @@
                 $('#user-verified').prop('checked', user.is_verified);
                 $('#user-error').hide();
 
-                // Disable role change for self
-                if (user.id === Auth.getUser().id) {
+                // Disable role change for superadmin (ID 1) and self
+                if (user.id === 1 || user.id === Auth.getUser().id) {
                     $('#user-role').prop('disabled', true);
                 } else {
                     $('#user-role').prop('disabled', false);
