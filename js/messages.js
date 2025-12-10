@@ -107,13 +107,16 @@ const Messages = {
      * Get a formatted error message based on API error response
      */
     getErrorMessage(error) {
-        if (error.message) {
+        // Get the error message from various possible locations
+        const errorMessage = error.message || error.response?.message || error.response?.data?.message || '';
+        
+        if (errorMessage && errorMessage !== 'An error occurred') {
             // Check for specific error messages
-            const message = error.message.toLowerCase();
+            const message = errorMessage.toLowerCase();
             
             // Check for active rentals error first - return actual API message
-            if (message.includes('active rental') || message.includes('cannot delete user')) {
-                return error.message;
+            if (message.includes('active rental') || message.includes('cannot delete user') || message.includes('active rentals')) {
+                return errorMessage; // Return original case message
             }
             
             if (message.includes('invalid credential') || message.includes('invalid email')) {
@@ -150,8 +153,13 @@ const Messages = {
                 return this.general.networkError;
             }
             
-            // Return the actual error message from API (including 422 errors with specific messages)
-            return error.message;
+            // For 422 errors, always return the actual API message if it exists
+            if (error.status === 422) {
+                return errorMessage;
+            }
+            
+            // Return the actual error message from API
+            return errorMessage;
         }
         
         // If no message, check status codes
