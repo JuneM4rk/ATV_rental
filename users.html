@@ -140,17 +140,6 @@
                             <label class="form-label">Address</label>
                             <input type="text" class="form-control" id="user-address" placeholder="Optional">
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Profile Image (Optional)</label>
-                            <div class="file-input-wrapper">
-                                <input type="file" id="user-avatar" name="avatar" accept="image/*">
-                                <label class="file-input-label" for="user-avatar">
-                                    <span id="user-avatar-label">Click to upload profile image</span>
-                                </label>
-                            </div>
-                            <img id="user-avatar-preview" src="" alt="" 
-                                 style="max-width: 150px; margin-top: 10px; display: none; border-radius: 50%; border: 2px solid var(--primary-color);">
-                        </div>
                         <div class="form-group" id="verified-group" style="display: none;">
                             <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                                 <input type="checkbox" id="user-is-verified" style="width: 18px; height: 18px;">
@@ -192,15 +181,6 @@
 
             // Filter change
             $('#role-filter').on('change', () => loadUsers(1));
-            
-            // Avatar preview for user modal
-            $('#user-avatar').on('change', function() {
-                if (this.files && this.files[0]) {
-                    App.previewImage(this, '#user-avatar-preview');
-                    $('#user-avatar-preview').show();
-                    $('#user-avatar-label').text(this.files[0].name);
-                }
-            });
             
             // Password toggle
             $('#show-user-password').on('change', function() {
@@ -279,7 +259,6 @@
             $('#user-email').prop('disabled', false);
             $('#user-role').prop('disabled', false);
             $('#verified-group').hide(); // Hide verification checkbox when adding
-            $('#user-avatar-preview').hide();
             $('#user-error').hide();
             $('#user-modal').show();
         }
@@ -303,7 +282,6 @@
                 $('#password-group').hide(); // Hide password when editing
                 $('#user-password').prop('required', false);
                 $('#verified-group').show(); // Show verification checkbox when editing
-                $('#user-avatar-preview').hide();
                 $('#user-error').hide();
 
                 // Disable role change for superadmin (ID 1) and self
@@ -347,34 +325,12 @@
                 }
                 
                 let response;
-                const avatarFile = $('#user-avatar')[0].files[0];
-                
                 if (isEdit) {
                     // Update existing user
-                    if (avatarFile) {
-                        // Use FormData for file upload with PUT method
-                        const uploadData = new FormData();
-                        Object.keys(formData).forEach(key => {
-                            uploadData.append(key, formData[key]);
-                        });
-                        uploadData.append('avatar', avatarFile);
-                        uploadData.append('_method', 'PUT'); // Laravel method spoofing
-                        response = await API.request('POST', `/users/${userId}`, uploadData);
-                    } else {
-                        response = await API.put(`/users/${userId}`, formData);
-                    }
+                    response = await API.put(`/users/${userId}`, formData);
                 } else {
                     // Create new user (is_verified will be set to true automatically in backend)
-                    if (avatarFile) {
-                        const uploadData = new FormData();
-                        Object.keys(formData).forEach(key => {
-                            uploadData.append(key, formData[key]);
-                        });
-                        uploadData.append('avatar', avatarFile);
-                        response = await API.upload('/users', uploadData);
-                    } else {
-                        response = await API.post('/users', formData);
-                    }
+                    response = await API.post('/users', formData);
                 }
 
                 if (response.success) {
