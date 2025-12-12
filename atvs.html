@@ -95,12 +95,12 @@
                     <form id="rental-form">
                         <input type="hidden" id="rental-atv-id">
                         <div class="form-group">
-                            <label class="form-label">Start Date & Time</label>
-                            <input type="datetime-local" class="form-control" id="rental-start" required>
+                            <label class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="rental-start" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">End Date & Time</label>
-                            <input type="datetime-local" class="form-control" id="rental-end" required>
+                            <label class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="rental-end" required>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Notes (Optional)</label>
@@ -142,8 +142,8 @@
                             <input type="text" class="form-control" id="atv-serial" name="serial_number" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Hourly Price ($)</label>
-                            <input type="number" class="form-control" id="atv-price" name="hourly_price" 
+                            <label class="form-label">Daily Price ($)</label>
+                            <input type="number" class="form-control" id="atv-price" name="daily_price" 
                                    step="0.01" min="0" required>
                         </div>
                         <div class="form-group">
@@ -282,11 +282,11 @@
                         <h3 class="atv-card-title">${atv.name}</h3>
                         <p class="atv-card-type">${atv.type}</p>
                         <div class="atv-card-price">
-                            ${App.formatCurrency(atv.hourly_price)} <span>/hour</span>
+                            ${App.formatCurrency(atv.daily_price)} <span>/day</span>
                         </div>
                         <div class="atv-card-actions">
                             ${atv.status === 'available' && Auth.isCustomer() 
-                                ? `<button class="btn btn-primary" onclick="showRentalModal(${atv.id}, '${atv.name}', ${atv.hourly_price})">Rent Now</button>` 
+                                ? `<button class="btn btn-primary" onclick="showRentalModal(${atv.id}, '${atv.name}', ${atv.daily_price})">Rent Now</button>` 
                                 : ''}
                             ${Auth.canManage() 
                                 ? `<button class="btn btn-outline" onclick="editAtv(${atv.id})">Edit</button>
@@ -308,27 +308,24 @@
 
             currentAtvPrice = price;
             $('#rental-atv-id').val(atvId);
-            $('#rental-atv-info').html(`<p><strong>ATV:</strong> ${atvName}</p><p><strong>Rate:</strong> ${App.formatCurrency(price)}/hour</p>`);
+            $('#rental-atv-info').html(`<p><strong>ATV:</strong> ${atvName}</p><p><strong>Rate:</strong> ${App.formatCurrency(price)}/day</p>`);
             
             // Clear form first
             $('#rental-form')[0].reset();
             $('#rental-price-preview').html('');
             $('#rental-error').hide();
             
-            // Set minimum datetime to tomorrow at 00:00 (today should not be selectable)
-            // datetime-local inputs require local time format: YYYY-MM-DDTHH:mm
+            // Set minimum date to tomorrow (today should not be selectable)
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
-            tomorrow.setHours(0, 0, 0, 0);
-            
             const year = tomorrow.getFullYear();
             const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
             const day = String(tomorrow.getDate()).padStart(2, '0');
-            const minDateTime = `${year}-${month}-${day}T00:00`;
+            const minDate = `${year}-${month}-${day}`;
             
-            // Set min attribute after form reset to ensure it sticks
-            $('#rental-start').attr('min', minDateTime);
-            $('#rental-end').attr('min', minDateTime);
+            // Set min attribute for date inputs
+            $('#rental-start').attr('min', minDate);
+            $('#rental-end').attr('min', minDate);
             
             $('#rental-modal').show();
         }
@@ -337,13 +334,13 @@
             const start = new Date($('#rental-start').val());
             const end = new Date($('#rental-end').val());
             
-            if (start && end && end > start) {
-                const hours = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60)));
-                const total = hours * currentAtvPrice;
+            if (start && end && end >= start) {
+                const days = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1);
+                const total = days * currentAtvPrice;
                 $('#rental-price-preview').html(`
                     <div class="card" style="background: #f8f9fa;">
                         <div class="card-body">
-                            <p><strong>Duration:</strong> ${hours} hour(s)</p>
+                            <p><strong>Duration:</strong> ${days} day(s)</p>
                             <p><strong>Estimated Total:</strong> <span style="font-size: 1.5rem; color: var(--primary-color);">${App.formatCurrency(total)}</span></p>
                         </div>
                     </div>
@@ -359,11 +356,17 @@
             $btn.prop('disabled', true).text('Submitting...');
 
             try {
+                // Convert dates to datetime (start of day for start, end of day for end)
+                const startDate = new Date($('#rental-start').val());
+                startDate.setHours(0, 0, 0, 0);
+                const endDate = new Date($('#rental-end').val());
+                endDate.setHours(23, 59, 59, 999);
+                
                 const response = await API.post('/rentals', {
                     atv_id: $('#rental-atv-id').val(),
-                    start_time: $('#rental-start').val(),
-                    end_time: $('#rental-end').val(),
-                    notes: $('#rental-notes').val()
+                    start_time: startDate.toISOString(),
+                    end_time: endDate.toISOString(),
+                    notes: $('#rental-notes').val() || null,
                 });
 
                 if (response.success) {
@@ -403,7 +406,7 @@
                 $('#atv-name').val(atv.name);
                 $('#atv-type').val(atv.type);
                 $('#atv-serial').val(atv.serial_number);
-                $('#atv-price').val(atv.hourly_price);
+                $('#atv-price').val(atv.daily_price);
                 $('#atv-status').val(atv.status);
                 $('#atv-description').val(atv.description);
                 
@@ -429,7 +432,7 @@
             formData.append('name', $('#atv-name').val());
             formData.append('type', $('#atv-type').val());
             formData.append('serial_number', $('#atv-serial').val());
-            formData.append('hourly_price', $('#atv-price').val());
+            formData.append('daily_price', $('#atv-price').val());
             formData.append('status', $('#atv-status').val());
             formData.append('description', $('#atv-description').val());
             
