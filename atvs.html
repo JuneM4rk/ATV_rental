@@ -310,19 +310,25 @@
             $('#rental-atv-id').val(atvId);
             $('#rental-atv-info').html(`<p><strong>ATV:</strong> ${atvName}</p><p><strong>Rate:</strong> ${App.formatCurrency(price)}/hour</p>`);
             
-            // Set minimum datetime to tomorrow (today should not be selectable)
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1); // Add 1 day
-            tomorrow.setHours(0, 0, 0, 0); // Set to start of day (00:00:00)
-            tomorrow.setMinutes(tomorrow.getMinutes() - tomorrow.getTimezoneOffset());
-            const minDateTime = tomorrow.toISOString().slice(0, 16);
-            $('#rental-start').attr('min', minDateTime);
-            $('#rental-end').attr('min', minDateTime);
-            
-            // Clear form
+            // Clear form first
             $('#rental-form')[0].reset();
             $('#rental-price-preview').html('');
             $('#rental-error').hide();
+            
+            // Set minimum datetime to tomorrow at 00:00 (today should not be selectable)
+            // datetime-local inputs require local time format: YYYY-MM-DDTHH:mm
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(0, 0, 0, 0);
+            
+            const year = tomorrow.getFullYear();
+            const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+            const day = String(tomorrow.getDate()).padStart(2, '0');
+            const minDateTime = `${year}-${month}-${day}T00:00`;
+            
+            // Set min attribute after form reset to ensure it sticks
+            $('#rental-start').attr('min', minDateTime);
+            $('#rental-end').attr('min', minDateTime);
             
             $('#rental-modal').show();
         }
