@@ -188,10 +188,34 @@
                 const response = await API.get('/rentals', { per_page: 5 });
                 
                 if (response.data && response.data.length > 0) {
+                    // Define status priority order (same as rentals.html)
+                    const statusOrder = {
+                        'pending': 1,
+                        'approved': 2,
+                        'denied': 3,
+                        'cancelled': 4,
+                        'rented': 5,
+                        'pending_return': 6,
+                        'returned': 7
+                    };
+
+                    // Sort rentals by status, then by ID (newest first within same status)
+                    const sortedRentals = [...response.data].sort((a, b) => {
+                        const statusA = statusOrder[a.status] || 999;
+                        const statusB = statusOrder[b.status] || 999;
+                        
+                        if (statusA !== statusB) {
+                            return statusA - statusB;
+                        }
+                        
+                        // If same status, sort by ID descending (newest first)
+                        return b.id - a.id;
+                    });
+
                     let html = '<div class="table-responsive"><table class="table" style="margin-bottom: 1rem;"><thead><tr>';
                     html += '<th>ATV</th><th>Status</th><th>Date</th><th>Price</th></tr></thead><tbody>';
                     
-                    response.data.forEach(rental => {
+                    sortedRentals.forEach(rental => {
                         html += `<tr>
                             <td>${rental.atv.name}</td>
                             <td>${App.getStatusBadge(rental.status)}</td>
