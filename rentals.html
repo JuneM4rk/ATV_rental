@@ -51,6 +51,7 @@
                             <option value="">All Status</option>
                             <option value="pending">Pending</option>
                             <option value="approved">Approved</option>
+                            <option value="pending_pickup">Pending Pickup</option>
                             <option value="rented">Rented</option>
                             <option value="pending_return">Pending Return</option>
                             <option value="returned">Returned</option>
@@ -231,7 +232,7 @@
                             <button class="btn btn-sm btn-danger" onclick="updateStatus(${rental.id}, 'denied')">Deny</button>
                         `;
                         break;
-                    case 'approved':
+                    case 'pending_pickup':
                         buttons = `<button class="btn btn-sm btn-primary" onclick="updateStatus(${rental.id}, 'rented')">Mark Picked Up</button>`;
                         break;
                     case 'pending_return':
@@ -242,6 +243,9 @@
                 // Customer actions
                 if (rental.status === 'pending' || rental.status === 'approved') {
                     buttons = `<button class="btn btn-sm btn-danger" onclick="cancelRental(${rental.id})">Cancel</button>`;
+                }
+                if (rental.status === 'approved') {
+                    buttons += ` <button class="btn btn-sm btn-primary" onclick="requestPickup(${rental.id})">Request Pickup</button>`;
                 } else if (rental.status === 'rented') {
                     buttons = `<button class="btn btn-sm btn-warning" onclick="requestReturn(${rental.id})">Request Return</button>`;
                 }
@@ -294,7 +298,7 @@
                                 <button class="btn btn-success" onclick="updateStatus(${rental.id}, 'approved'); $('#rental-modal').hide();">Approve</button>
                             `;
                             break;
-                        case 'approved':
+                        case 'pending_pickup':
                             actions = `
                                 <button class="btn btn-secondary" onclick="$('#rental-modal').hide()">Close</button>
                                 <button class="btn btn-primary" onclick="updateStatus(${rental.id}, 'rented'); $('#rental-modal').hide();">Mark as Picked Up</button>
@@ -313,6 +317,9 @@
                             <button class="btn btn-secondary" onclick="$('#rental-modal').hide()">Close</button>
                             <button class="btn btn-danger" onclick="cancelRental(${rental.id}); $('#rental-modal').hide();">Cancel Rental</button>
                         `;
+                    }
+                    if (rental.status === 'approved') {
+                        actions += `<button class="btn btn-primary" onclick="requestPickup(${rental.id}); $('#rental-modal').hide();">Request Pickup</button>`;
                     } else if (rental.status === 'rented') {
                         actions = `
                             <button class="btn btn-secondary" onclick="$('#rental-modal').hide()">Close</button>
@@ -346,6 +353,20 @@
             try {
                 await API.post(`/rentals/${id}/cancel`);
                 App.showSuccess('Rental cancelled successfully.');
+                loadRentals(currentPage);
+            } catch (error) {
+                App.showError(Messages.getErrorMessage(error));
+            }
+        }
+
+        async function requestPickup(id) {
+            if (!confirm('Are you sure you want to request pickup for this rental?')) {
+                return;
+            }
+
+            try {
+                await API.post(`/rentals/${id}/request-pickup`);
+                App.showSuccess('Pickup request submitted successfully!');
                 loadRentals(currentPage);
             } catch (error) {
                 App.showError(Messages.getErrorMessage(error));
