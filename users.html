@@ -279,8 +279,10 @@
                 $('#user-is-verified').prop('checked', user.is_verified);
                 $('#user-modal-title').text('Edit User');
                 $('#save-user-btn').text('Save Changes');
-                $('#password-group').hide(); // Hide password when editing
-                $('#user-password').prop('required', false);
+                $('#password-group').show(); // Show password field when editing (optional)
+                $('#user-password').val(''); // Clear password field
+                $('#user-password').attr('placeholder', 'Leave blank to keep current password');
+                $('#user-password').prop('required', false); // Make password optional when editing
                 $('#verified-group').show(); // Show verification checkbox when editing
                 $('#user-error').hide();
 
@@ -316,12 +318,17 @@
                     address: $('#user-address').val() || null,
                 };
                 
-                // Add password for new users only
+                // Add password for new users or if provided when editing
                 if (!isEdit) {
                     formData.password = $('#user-password').val();
                 } else {
                     // Add is_verified for edit mode only
                     formData.is_verified = $('#user-is-verified').is(':checked');
+                    // Add password only if provided (optional when editing)
+                    const newPassword = $('#user-password').val().trim();
+                    if (newPassword) {
+                        formData.password = newPassword;
+                    }
                 }
                 
                 let response;
