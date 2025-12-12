@@ -168,9 +168,33 @@
                 return;
             }
 
+            // Define status priority order
+            const statusOrder = {
+                'pending': 1,
+                'approved': 2,
+                'denied': 3,
+                'cancelled': 4,
+                'rented': 5,
+                'pending_return': 6,
+                'returned': 7
+            };
+
+            // Sort rentals by status, then by ID (newest first within same status)
+            const sortedRentals = [...rentals].sort((a, b) => {
+                const statusA = statusOrder[a.status] || 999;
+                const statusB = statusOrder[b.status] || 999;
+                
+                if (statusA !== statusB) {
+                    return statusA - statusB;
+                }
+                
+                // If same status, sort by ID descending (newest first)
+                return b.id - a.id;
+            });
+
             const isManager = Auth.canManage();
 
-            const html = rentals.map(rental => `
+            const html = sortedRentals.map(rental => `
                 <tr>
                     <td>#${rental.id}</td>
                     ${isManager ? `<td>${rental.user.name}</td>` : ''}
