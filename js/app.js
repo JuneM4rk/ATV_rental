@@ -166,6 +166,17 @@ const App = {
      * Format date
      */
     formatDate(dateString) {
+        // Handle date-only strings (YYYY-MM-DD) to avoid timezone conversion issues
+        if (dateString && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            const [year, month, day] = dateString.split('-');
+            const date = new Date(year, month - 1, day);
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+        // Handle full datetime strings
         const date = new Date(dateString);
         return date.toLocaleDateString('en-US', {
             year: 'numeric',
@@ -178,6 +189,17 @@ const App = {
      * Format datetime
      */
     formatDateTime(dateString) {
+        // Handle date-only strings (YYYY-MM-DD) to avoid timezone conversion issues
+        if (dateString && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            const [year, month, day] = dateString.split('-');
+            const date = new Date(year, month - 1, day);
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+        // Handle full datetime strings
         const date = new Date(dateString);
         return date.toLocaleDateString('en-US', {
             year: 'numeric',
