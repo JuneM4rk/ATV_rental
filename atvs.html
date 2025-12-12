@@ -310,10 +310,12 @@
             $('#rental-atv-id').val(atvId);
             $('#rental-atv-info').html(`<p><strong>ATV:</strong> ${atvName}</p><p><strong>Rate:</strong> ${App.formatCurrency(price)}/hour</p>`);
             
-            // Set minimum datetime to now
-            const now = new Date();
-            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-            const minDateTime = now.toISOString().slice(0, 16);
+            // Set minimum datetime to tomorrow (today should not be selectable)
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1); // Add 1 day
+            tomorrow.setHours(0, 0, 0, 0); // Set to start of day (00:00:00)
+            tomorrow.setMinutes(tomorrow.getMinutes() - tomorrow.getTimezoneOffset());
+            const minDateTime = tomorrow.toISOString().slice(0, 16);
             $('#rental-start').attr('min', minDateTime);
             $('#rental-end').attr('min', minDateTime);
             
