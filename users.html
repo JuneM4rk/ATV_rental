@@ -42,7 +42,10 @@
         <!-- Main Content -->
         <main class="main-content">
             <div class="container">
-                <h1>User Management</h1>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h1 style="margin: 0;">User Management</h1>
+                    <button class="btn btn-primary" onclick="addUser()">+ Add New User</button>
+                </div>
                 
                 <!-- Search & Filters -->
                 <div class="search-bar">
@@ -92,7 +95,7 @@
         <div id="user-modal" class="modal-overlay" style="display: none;">
             <div class="modal">
                 <div class="modal-header">
-                    <h3>Edit User</h3>
+                    <h3 id="user-modal-title">Edit User</h3>
                     <button class="modal-close" onclick="$('#user-modal').hide()">&times;</button>
                 </div>
                 <div class="modal-body">
@@ -114,7 +117,16 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Email</label>
-                            <input type="email" class="form-control" id="user-email" disabled>
+                            <input type="email" class="form-control" id="user-email" required>
+                        </div>
+                        <div class="form-group" id="password-group" style="display: none;">
+                            <label class="form-label">Password</label>
+                            <input type="password" class="form-control" id="user-password" 
+                                   placeholder="Enter password (min 8 characters)">
+                            <label class="show-password-label">
+                                <input type="checkbox" id="show-user-password" class="show-password-checkbox">
+                                Show Password
+                            </label>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Role</label>
@@ -123,6 +135,27 @@
                                 <option value="manager">Manager</option>
                                 <option value="admin">Admin</option>
                             </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Address</label>
+                            <input type="text" class="form-control" id="user-address" placeholder="Optional">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Profile Image (Optional)</label>
+                            <div class="file-input-wrapper">
+                                <input type="file" id="user-avatar" name="avatar" accept="image/*">
+                                <label class="file-input-label" for="user-avatar">
+                                    <span id="user-avatar-label">Click to upload profile image</span>
+                                </label>
+                            </div>
+                            <img id="user-avatar-preview" src="" alt="" 
+                                 style="max-width: 150px; margin-top: 10px; display: none; border-radius: 50%; border: 2px solid var(--primary-color);">
+                        </div>
+                        <div class="form-group" id="verified-group" style="display: none;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" id="user-is-verified" style="width: 18px; height: 18px;">
+                                <span>Email Verified</span>
+                            </label>
                         </div>
                         <div id="user-error" class="error-message mb-2" style="display: none;"></div>
                     </form>
@@ -159,6 +192,25 @@
 
             // Filter change
             $('#role-filter').on('change', () => loadUsers(1));
+            
+            // Avatar preview for user modal
+            $('#user-avatar').on('change', function() {
+                if (this.files && this.files[0]) {
+                    App.previewImage(this, '#user-avatar-preview');
+                    $('#user-avatar-preview').show();
+                    $('#user-avatar-label').text(this.files[0].name);
+                }
+            });
+            
+            // Password toggle
+            $('#show-user-password').on('change', function() {
+                const passwordInput = $('#user-password');
+                if ($(this).is(':checked')) {
+                    passwordInput.attr('type', 'text');
+                } else {
+                    passwordInput.attr('type', 'password');
+                }
+            });
         });
 
         async function loadUsers(page = 1) {
@@ -216,6 +268,22 @@
             $('#users-body').html(html);
         }
 
+        function addUser() {
+            // Reset form
+            $('#user-form')[0].reset();
+            $('#user-id').val('');
+            $('#user-modal-title').text('Add New User');
+            $('#save-user-btn').text('Create User');
+            $('#password-group').show();
+            $('#user-password').prop('required', true);
+            $('#user-email').prop('disabled', false);
+            $('#user-role').prop('disabled', false);
+            $('#verified-group').hide(); // Hide verification checkbox when adding
+            $('#user-avatar-preview').hide();
+            $('#user-error').hide();
+            $('#user-modal').show();
+        }
+
         async function editUser(id) {
             try {
                 const response = await API.get(`/users/${id}`);
@@ -226,7 +294,16 @@
                 $('#user-last-name').val(user.last_name);
                 $('#user-username').val(user.username);
                 $('#user-email').val(user.email);
+                $('#user-email').prop('disabled', true); // Email cannot be changed when editing
                 $('#user-role').val(user.role);
+                $('#user-address').val(user.address || '');
+                $('#user-is-verified').prop('checked', user.is_verified);
+                $('#user-modal-title').text('Edit User');
+                $('#save-user-btn').text('Save Changes');
+                $('#password-group').hide(); // Hide password when editing
+                $('#user-password').prop('required', false);
+                $('#verified-group').show(); // Show verification checkbox when editing
+                $('#user-avatar-preview').hide();
                 $('#user-error').hide();
 
                 // Disable role change for superadmin (ID 1) and self
@@ -247,20 +324,62 @@
             const $error = $('#user-error');
             
             $error.hide();
-            $btn.prop('disabled', true).text('Saving...');
+            const userId = $('#user-id').val();
+            const isEdit = !!userId;
+            $btn.prop('disabled', true).text(isEdit ? 'Saving...' : 'Creating...');
 
             try {
-                const userId = $('#user-id').val();
-                const response = await API.put(`/users/${userId}`, {
+                const formData = {
                     first_name: $('#user-first-name').val(),
                     last_name: $('#user-last-name').val(),
                     username: $('#user-username').val(),
-                    role: $('#user-role').val()
-                });
+                    email: $('#user-email').val(),
+                    role: $('#user-role').val(),
+                    address: $('#user-address').val() || null,
+                };
+                
+                // Add password for new users only
+                if (!isEdit) {
+                    formData.password = $('#user-password').val();
+                } else {
+                    // Add is_verified for edit mode only
+                    formData.is_verified = $('#user-is-verified').is(':checked');
+                }
+                
+                let response;
+                const avatarFile = $('#user-avatar')[0].files[0];
+                
+                if (isEdit) {
+                    // Update existing user
+                    if (avatarFile) {
+                        // Use FormData for file upload with PUT method
+                        const uploadData = new FormData();
+                        Object.keys(formData).forEach(key => {
+                            uploadData.append(key, formData[key]);
+                        });
+                        uploadData.append('avatar', avatarFile);
+                        uploadData.append('_method', 'PUT'); // Laravel method spoofing
+                        response = await API.request('POST', `/users/${userId}`, uploadData);
+                    } else {
+                        response = await API.put(`/users/${userId}`, formData);
+                    }
+                } else {
+                    // Create new user (is_verified will be set to true automatically in backend)
+                    if (avatarFile) {
+                        const uploadData = new FormData();
+                        Object.keys(formData).forEach(key => {
+                            uploadData.append(key, formData[key]);
+                        });
+                        uploadData.append('avatar', avatarFile);
+                        response = await API.upload('/users', uploadData);
+                    } else {
+                        response = await API.post('/users', formData);
+                    }
+                }
 
                 if (response.success) {
                     $('#user-modal').hide();
-                    App.showSuccess(Messages.user.updateSuccess);
+                    App.showSuccess(isEdit ? Messages.user.updateSuccess : 'User created successfully.');
                     loadUsers(currentPage);
                 }
             } catch (error) {
@@ -269,7 +388,7 @@
                 }
                 $error.text(Messages.getErrorMessage(error)).show();
             } finally {
-                $btn.prop('disabled', false).text('Save Changes');
+                $btn.prop('disabled', false).text(isEdit ? 'Save Changes' : 'Create User');
             }
         }
 
