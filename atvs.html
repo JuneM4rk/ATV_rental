@@ -356,16 +356,20 @@
             $btn.prop('disabled', true).text('Submitting...');
 
             try {
-                // Convert dates to datetime (start of day for start, end of day for end)
-                const startDate = new Date($('#rental-start').val());
-                startDate.setHours(0, 0, 0, 0);
-                const endDate = new Date($('#rental-end').val());
-                endDate.setHours(23, 59, 59, 999);
+                // Get date strings directly from input (YYYY-MM-DD format)
+                // This avoids timezone conversion issues - send date-only strings
+                const startDateString = $('#rental-start').val();
+                const endDateString = $('#rental-end').val();
                 
+                if (!startDateString || !endDateString) {
+                    throw new Error('Please select both start and end dates');
+                }
+                
+                // Send date strings directly - backend will parse and normalize them
                 const response = await API.post('/rentals', {
                     atv_id: $('#rental-atv-id').val(),
-                    start_time: startDate.toISOString(),
-                    end_time: endDate.toISOString(),
+                    start_time: startDateString,  // Send as YYYY-MM-DD (no timezone conversion)
+                    end_time: endDateString,      // Send as YYYY-MM-DD (no timezone conversion)
                     notes: $('#rental-notes').val() || null,
                 });
 
