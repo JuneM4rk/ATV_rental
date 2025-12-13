@@ -195,16 +195,24 @@ const Auth = {
             }
         };
 
-        // Show confirmation dialog if requested and App is available
-        if (showConfirmation && typeof App !== 'undefined' && typeof App.confirm === 'function') {
-            App.confirm(
-                'Are you sure you want to logout?',
-                performLogout
-            );
-        } else {
-            // No confirmation, logout directly
-            performLogout();
+        // Show confirmation dialog if requested
+        if (showConfirmation) {
+            // Use App.confirm if available, otherwise fall back to native confirm
+            if (typeof App !== 'undefined' && typeof App.confirm === 'function') {
+                App.confirm('Are you sure you want to logout?', () => {
+                    performLogout();
+                });
+                return; // Exit here, performLogout will be called from callback
+            } else {
+                // Fallback to native confirm if App.confirm is not available
+                if (!confirm('Are you sure you want to logout?')) {
+                    return; // User cancelled
+                }
+            }
         }
+        
+        // Proceed with logout
+        performLogout();
     }
 };
 
