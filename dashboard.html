@@ -268,14 +268,29 @@
         }
 
         async function updateRentalStatus(id, status) {
-            try {
-                await API.put(`/rentals/${id}/status`, { status });
-                App.showSuccess(Messages.rental.updateStatusSuccess);
-                loadPendingRentals();
-                loadStats();
-            } catch (error) {
-                App.showError(Messages.getErrorMessage(error));
+            // Get confirmation message based on status
+            let confirmMessage = '';
+            switch (status) {
+                case 'approved':
+                    confirmMessage = 'Are you sure you want to approve this rental?';
+                    break;
+                case 'denied':
+                    confirmMessage = 'Are you sure you want to deny this rental?';
+                    break;
+                default:
+                    confirmMessage = 'Are you sure you want to update the status of this rental?';
             }
+            
+            App.confirm(confirmMessage, async () => {
+                try {
+                    await API.put(`/rentals/${id}/status`, { status });
+                    App.showSuccess(Messages.rental.updateStatusSuccess);
+                    loadPendingRentals();
+                    loadStats();
+                } catch (error) {
+                    App.showError(Messages.getErrorMessage(error));
+                }
+            });
         }
     </script>
 </body>
