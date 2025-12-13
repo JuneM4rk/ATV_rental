@@ -346,31 +346,27 @@
         }
 
         async function cancelRental(id) {
-            if (!confirm('Are you sure you want to cancel this rental?')) {
-                return;
-            }
-
-            try {
-                await API.post(`/rentals/${id}/cancel`);
-                App.showSuccess('Rental cancelled successfully.');
-                loadRentals(currentPage);
-            } catch (error) {
-                App.showError(Messages.getErrorMessage(error));
-            }
+            App.confirm('Are you sure you want to cancel this rental?', async () => {
+                try {
+                    await API.post(`/rentals/${id}/cancel`);
+                    App.showSuccess('Rental cancelled successfully.');
+                    loadRentals(currentPage);
+                } catch (error) {
+                    App.showError(Messages.getErrorMessage(error));
+                }
+            });
         }
 
         async function requestPickup(id) {
-            if (!confirm('Are you sure you want to request pickup for this rental?')) {
-                return;
-            }
-
-            try {
-                await API.post(`/rentals/${id}/request-pickup`);
-                App.showSuccess('Pickup request submitted successfully!');
-                loadRentals(currentPage);
-            } catch (error) {
-                App.showError(Messages.getErrorMessage(error));
-            }
+            App.confirm('Are you sure you want to request pickup for this rental?', async () => {
+                try {
+                    await API.post(`/rentals/${id}/request-pickup`);
+                    App.showSuccess('Pickup request submitted successfully!');
+                    loadRentals(currentPage);
+                } catch (error) {
+                    App.showError(Messages.getErrorMessage(error));
+                }
+            });
         }
 
         async function requestReturn(id) {
